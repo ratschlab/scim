@@ -1,4 +1,7 @@
 import numpy as np
+import scipy as sp
+import pandas as pd
+import anndata
 from universal_divergence import estimate
 
 
@@ -67,4 +70,56 @@ def separate_shared_idx(labels, sources, d1=0, d2=1):
     src1_mutual = np.logical_and(src1, np.isin(labels, shared_labels))
     src2_mutual = np.logical_and(src2, np.isin(labels, shared_labels))
     src_specific = np.logical_and(np.logical_or(src1, src2), np.logical_not(np.isin(labels, shared_labels)))
+    
     return src1_mutual, src2_mutual, src_specific
+
+
+def extract_matched_labels(labels_source, labels_target, row_idx, col_idx):
+    """ Merge all the metainfo (labels) for the matches
+    labels_*: pandas dataframe with all the metainfo, rows correspond to cells
+    row_idx: numerical indices of the matches (source)
+    col_idx: numerical indices of the matches (target)
+    """
+    # bcs anndata is mutable
+    labels_source = labels_source.copy()
+    labels_target = labels_target.copy()
+    
+    if 'source' not in labels_source.columns:
+        labels_source.columns = [x+'_source' for x in labels_source.columns]
+    labels_source = labels_source.iloc[row_idx,:].reset_index(drop=True)
+    
+    if 'target' not in labels_target.columns:
+        labels_target.columns = [x+'_target' for x in labels_target.columns]
+    labels_target = labels_target.iloc[col_idx,:].reset_index(drop=True) 
+    
+    labels_matched = pd.concat([labels_source, labels_target], axis=1, ignore_index=False)
+    
+    return labels_matched  
+
+def get_accuracy(matches, colname_compare='cell_type', n_null=0, extended=False):
+    """Compute accuracy as true positive fraction
+    matches: pandas dataframe, output from extract_matched_labels()
+    colname_compare: column name to use for accuracy calculation {colname_compare}_source,
+                     {colname_compare}_target must be in matches.columns
+    n_null: number of matches with the null node to account for in denominator
+    extended: whether to return extended information {accuracy, n_tp, n_fp}
+    """
+    n_tp = np.sum(matches[colname_compare+'_source']==matches[colname_compare+'_target'])
+    n_matches = matches.shape[0] + n_null
+    accuracy = n_tp/n_matches
+    if(extended):
+        return accuracy, n_tp, n_matches-n_tp
+    else:
+        return accuracy
+
+
+def get_confusion_matrix(matches, colname_compare='branch'):
+    """ Get the confusion matrix
+    matches: pandas dataframe, output from extract_matched_labels()
+    colname_compare: column name to use for accuracy calculation {colname_compare}_source,
+                     {colname_compare}_target must be in matches.columns
+    """
+    y_source = pd.Series(matches[colname_compare+'_source'], name='Source')
+    y_target = pd.Series(matches[colname_compare+'_target'], name='Target')
+    
+    return pd.crosstab(y_source, y_target)
