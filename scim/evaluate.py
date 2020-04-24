@@ -6,7 +6,8 @@ def score_divergence(codes, labels, sources, k=50, **kwargs):
     """
     Measures how well sources are mixed (smaller: well-mixed)
 
-    Function to calculate the divergence score as described in BERMUDA
+    Function to calculate the divergence score as described in BERMUDA (Wang et al., 2019)
+    Code was adapted form https://github.com/txWang/BERMUDA/blob/master/evaluate.py
 
     Estimates the avg pairwise symmetric divergence of p_src and q_tgt
     i.e. .5 * D(p_src || q_tgt) + .5 D(q_tgt || p_src) for each src tgt pair
