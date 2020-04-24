@@ -1,4 +1,5 @@
 import tensorflow.keras as tfk
+from . import activations as act
 
 
 class Integrator(tfk.Model):
@@ -6,8 +7,10 @@ class Integrator(tfk.Model):
             self,
             latent_dim, data_dim,
             encoder, decoder, discriminator,
-            lmbda=1,
+            lmda=1,
             discriminator_input_cats=None,
+            likelihood='IsotropicGaussian',
+            posterior='IsotropicGaussian'
             ):
 
         self.latent_dim = latent_dim
@@ -15,9 +18,16 @@ class Integrator(tfk.Model):
         self.encoder = encoder
         self.decoder = decoder
         self.discriminator = discriminator
-        self.lmbda = lmbda
-        self.posterior = ''  # TODO: add posterior
-        self.likelihood = ''  # TODO: add likelihood
+        self.lmda = lmda
+
+        if isinstance(likelihood, str):
+            likelihood = getattr(act, likelihood)
+        self.likelihood = likelihood(self.data_dim)
+
+        if isinstance(posterior, str):
+            posterior = getattr(act, posterior)
+        self.posterior = posterior(self.latent_dim)
+        return
 
     def encode(self, data):
         '''Map inputs into latent space'''
