@@ -45,7 +45,7 @@ def get_knn_union(source, target, knn_k, knn_n_jobs):
     
     return knn_source_idx, knn_target_idx, knn_dist
 
-def get_null_cost(cost, null_cost_percentile=90):
+def get_null_cost(cost, null_cost_percentile=95):
     """Compute the cost of matching to the null node based on all other costs
     cost: vector of costs (weights on all source->target edges)
     null_cost_percentile: percentile of the cost that should correspond to null node matching
@@ -128,6 +128,33 @@ def build_graph_base(source_idx, target_idx, capacity_method='uniform', seed=456
     
     return G
 
+
+def build_graph(source_idx, target_idx, knn_source_idx, knn_target_idx, knn_dist,
+                capacity_method='uniform', add_null=True, null_cost_percentile=95, seed=456):
+    """Build a graph based on knn indices
+    source_idx: nodes at the source of the graph
+    target_idx: nodes at the target of the graph
+    knn_source_idx: nodes at the source of the graph with knn connections
+    knn_target_idx: nodes at the target of the graph with knn connections
+    knn_dist: distance (cost) on the knn connections
+    capacity_method: how to set capacities on the target to sink edged {uniform, inf, top, 1to1}
+    add_null: whether to add the null node ot the graph
+    null_cost_percentile: which percentile of the overall costs should correspond to the null match penalty
+    seed: random seed
+    
+    output: directed graph object
+    """
+    G = build_graph_base(source_idx, target_idx, capacity_method=capacity_method, seed=seed)
+    # add inter-technology connections
+    source_target_edges = [(knn_source_idx[i], knn_target_idx[i],
+                           {'capacity':1, 'weight':knn_dist[i]}) for i in range(len(knn_dist))]
+    G.add_edges_from(source_target_edges)
+    if(add_null):
+        null_cost = get_null_cost(knn_dist, null_cost_percentile)
+        G = extend_graph_null(G, source_idx, null_cost)
+
+    return G 
+
 def convert_to_int(cost, factor):
     """Convert float values into integers by multiplying by factor and cropping the floating points
     cost: vector of float values
@@ -138,9 +165,9 @@ def convert_to_int(cost, factor):
     
     return cost
 
-def get_cost_knn_graph(source, target, factor, cost_type, knn_k, knn_n_jobs,
+def get_cost_knn_graph(source, target, factor=100, cost_type='distance', knn_k=10, knn_n_jobs=100,
                        capacity_method='uniform', add_null=True,
-                       null_cost_percentile=90, seed=456):
+                       null_cost_percentile=95, seed=456):
     """Build an extended graph based on knn graph
     source: pandas dataframe which rows will be placed at the source of the graph (larger dataset)
     target: pandas dataframe which rows will be placed at the target of the graph (smaller dataset)
@@ -155,7 +182,7 @@ def get_cost_knn_graph(source, target, factor, cost_type, knn_k, knn_n_jobs,
     
     output: directed graph object
     """
-    knn_source_idx, knn_target_idx, knn_dist = get_knn_union(source, target, distance_measure, knn_k, knn_n_jobs)
+    knn_source_idx, knn_target_idx, knn_dist = get_knn_union(source, target, knn_k, knn_n_jobs)
     
     if(cost_type=='percentile'):
         len_p = int(len(knn_dist))
@@ -195,6 +222,7 @@ def extract_matches_flow(flow_dict, keep_only='source'):
     matches = pd.DataFrame({'source': matches_source,
                             'target': matches_target})
     return matches
+
 
 def mcmf(G):
     """ Use the Min-Cost Max-Flow algorithm to find the best matches between cells across technologies
