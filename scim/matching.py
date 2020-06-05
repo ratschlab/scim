@@ -7,16 +7,21 @@ import time
 from scipy.spatial import cKDTree
 
 
-def get_knn_onesided(source, target, knn_k, knn_n_jobs):
+def get_knn_onesided(source, target, knn_k, knn_n_jobs, st=True):
     """Get kNN connections between source and target
     source: pandas dataframe which rows will be placed at the source of the graph (larger dataset)
     target: pandas dataframe which rows will be placed at the target of the graph (smaller dataset)
     knn_k: k neighbors to be found
     knn_n_jobs: how many processors to use for the job
+    st: source to target (True/False)
     """
     knn = cKDTree(target).query(x=source, k=knn_k, n_jobs=knn_n_jobs)
-    knn_source_idx = ['source_'+str(x) for x in np.array(range(source.shape[0])).repeat(knn_k)]
-    knn_target_idx = ['target_'+str(x) for x in knn[1].reshape((-1,1)).flatten()]
+    if(st):
+        knn_source_idx = ['source_'+str(x) for x in np.array(range(source.shape[0])).repeat(knn_k)]
+        knn_target_idx = ['target_'+str(x) for x in knn[1].reshape((-1,1)).flatten()]
+    else:
+        knn_target_idx = ['target_'+str(x) for x in np.array(range(target.shape[0])).repeat(knn_k)]
+        knn_source_idx = ['source_'+str(x) for x in knn[1].reshape((-1,1)).flatten()]
     knn_dist = knn[0].reshape((-1,1)).flatten()
 
     return knn_source_idx, knn_target_idx, knn_dist
@@ -30,8 +35,8 @@ def get_knn_union(source, target, knn_k, knn_n_jobs):
     
     output: nodes at the source of the graph, nodes at the target of the graph, Euclidean distance between the nodes
     """
-    knn_source_idx, knn_target_idx, knn_dist = get_knn_onesided(source, target, knn_k, knn_n_jobs)
-    knn2_source_idx, knn2_target_idx, knn2_dist = get_knn_onesided(target, source, knn_k, knn_n_jobs)
+    knn_source_idx, knn_target_idx, knn_dist = get_knn_onesided(source, target, knn_k, knn_n_jobs, st=True)
+    knn2_source_idx, knn2_target_idx, knn2_dist = get_knn_onesided(target, source, knn_k, knn_n_jobs, st=False)
     
     knn_source_idx = np.append(knn_source_idx, knn2_source_idx)
     knn_target_idx = np.append(knn_target_idx, knn2_target_idx)
