@@ -2,48 +2,40 @@ import tensorflow as tf
 
 
 class Trainer:
-    def __init__(self, model,
-                 genopt, crtopt,
-                 niters_critic=5):
+    def __init__(self, encoder_lut, decoder_lut,
+                 data_dim_lut, latent_dim,
+                 discriminator, source_key,
+                 discopt,
+                 genopt_lut,
+                 beta):
 
-        self.model = model
-        self.genopt = genopt
-        self.crtopt = crtopt
-        self.niters_critic = niters_critic
+        techs = data_dim_lut.keys()
+        assert encoder_lut.keys() == techs
+        assert decoder_lut.keys() == techs
+        assert genopt_lut.keys() == techs
 
-    def update_adversarial(self, inputs, labels=None):
-        tvs = self.model.encoder.trainable_variables \
-                + self.model.decoder.trainable_variables
+        self.model = dict()
+        for key in techs:
+            self.model[key] = Integrator(
+                    latent_dim=latent_dim,
+                    data_dim=data_dim_lut[key],
+                    encoder_net=encoder_lut[key],
+                    decoder_net=decoder_lut[key],
+                    discriminator=discriminator,
+                    beta=beta,
+                    is_source=key == source_key
+                    )
 
+        self.discriminator = discriminator
+        self.discopt = discopt
+        self.genopt_lut = genopt_lut
+        return
+
+    def vae_step(self, inputs, tech, beta=None):
         with tf.GradientTape() as tape:
-            tape.watch(tvs)
-            loss, nll, adv = self.model.adversarial_loss(inputs, labels=labels)
+            loss, (mse, kl), (codes, recon) = self.model[tech].vae(inputs, beta=beta)
+        tvs = self.model[tech].generator_variables()
+        grads = tape.gradient(loss, tvs)
+        self.genopt[key].apply_gradients(zip(grads, tvs))
+        return loss, (mse, kl), (codes, recon)
 
-        grad = tape.gradient(loss, tvs)
-        self.genopt.apply_gradients(zip(grad, tvs))
-        return loss, nll, adv
-
-    def update_discriminator(self, codes, prior,
-                             label=None,
-                             plabel=None):
-        tvs = self.model.critic.trainable_variables
-        with tf.GradientTape() as tape:
-            tape.watch(tvs)
-            loss = self.model.critic_loss(codes, prior,
-                                          label, plabel)
-        grad = tape.gradient(loss, tvs)
-        self.crtopt.apply_gradients(zip(grad, tvs))
-        return loss
-
-    def training_step(self, inputs, prior,
-                      label=None, plabel=None):
-
-        tf.keras.backend.set_learning_phase(True)
-        for _ in range(self.niters_critic):
-            codes = self.model.encode(inputs).sample()
-            critic_loss = self.update_discriminator(codes, prior, label, plabel)
-        _, recon_loss, generator_loss = self.update_adversarial(inputs)
-
-        tf.compat.v1.assign(self.gs, self.gs + 1)
-
-        return recon_loss, generator_loss, critic_loss
