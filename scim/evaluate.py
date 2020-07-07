@@ -3,6 +3,7 @@ import scipy as sp
 import pandas as pd
 import anndata
 from universal_divergence import estimate
+from itertools import combinations
 
 
 def score_divergence(codes, labels=None, sources=None, k=50, **kwargs):
