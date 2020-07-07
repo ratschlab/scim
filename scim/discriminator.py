@@ -22,19 +22,28 @@ class CriticBase(tf.keras.Model):
         '''Append one-hot labels to input data'''
         assert self.can_condition
         n_classes = self.input_cats.size
-        indices = label_indices.numpy().tolist()
+
+        # tf.one_hot is VERY picky about how indices are passed
+        if isinstance(label_indices, tf.Tensor):
+            indices = label_indices.numpy().tolist()
+        else:
+            indices = list(label_indices)
+
         encoded_labels = tf.one_hot(indices, n_classes, dtype=data.dtype)
         return tf.concat((data, encoded_labels), axis=1)
+
+    def logits(self, data, labels=None):
+        if self.can_condition:
+            assert labels is not None
+            data = self.condition_inputs(data, labels)
+        return self.net(data)
 
     def loss(self, data, real, labels=None):
         '''Discriminator loss
 
         Try to classify real data as true, generated data as fake.
         '''
-        if self.can_condition:
-            assert labels is not None
-            data = self.condition_inputs(data, labels)
-        logits = self.net(data)
+        logits = self.logits(data, labels)
 
         if real:
             loss = self.loss_real(logits)
@@ -82,7 +91,6 @@ class SpectralNormMixin:
 
         return
 
-    @staticmethod
     def _l2norm(self, arg, eps=1e-12):
         return arg / (tf.norm(arg) + eps)
 
@@ -107,7 +115,7 @@ class SpectralNormMixin:
             sigma = self.power_iterate(w)
 
             if modify:
-                tf.assign(w, w/sigma)
+                tf.compat.v1.assign(w, w/sigma)
 
             sigma_np = sigma.numpy()
             assert sigma_np.size == 1

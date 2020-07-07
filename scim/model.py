@@ -3,14 +3,11 @@ import tensorflow as tf
 
 class VAE(tf.keras.Model):
     def __init__(self,
-                 latent_dim, data_dim,
                  encoder_net, decoder_net,
                  beta=1, **kwargs
                  ):
 
         super(VAE, self).__init__(**kwargs)
-        self.latent_dim = latent_dim
-        self.data_dim = data_dim
 
         self.encoder_net = encoder_net
         self.decoder_net = decoder_net
@@ -63,8 +60,6 @@ class Integrator(VAE):
         # source tech is used as discriminator positive class
         self.is_source = is_source
         self.discriminator = discriminator
-
-
         return
 
     def generator_variables(self):
@@ -77,15 +72,15 @@ class Integrator(VAE):
     def vae(self, inputs, beta=None):
         return super().call(inputs, beta)
 
-    def adversarial_loss(self, inputs, labels=None):
+    def adversarial_loss(self, inputs, discriminator, labels=None):
         recons, codes, (mu, logvar) = self.forward(inputs)
 
         mse = tf.keras.losses.MSE(inputs, recons)
 
         # fool the discriminator
-        adv = self.discriminator.loss(codes,
-                                      labels=labels,
-                                      real=not self.is_source)
+        adv = discriminator.loss(codes,
+                                 labels=labels,
+                                 real=not self.is_source)
 
         loss = mse + self.beta * adv
         return loss, (mse, adv)
