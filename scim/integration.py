@@ -66,5 +66,5 @@ class Integrator(tfk.Model):
 
         nll = -recon.log_prob(inputs).sum(1)
         adv = self.generator_loss(codes, labels)
-        loss = nll + self.model.beta * adv
+        loss = nll + self.beta * adv
         return loss, nll, adv

@@ -4,15 +4,12 @@ import tensorflow as tf
 class CriticBase(tf.keras.Model):
     def __init__(self,
                  net,
-                 true_class='real',
                  input_cats=None):
 
         super(CriticBase, self).__init__()
         self.net = net
         self.input_cats = input_cats
         self.can_condition = self.input_cats is not None
-
-        self._true_class = true_class
         return
 
     def loss_real(self, logits):
@@ -25,44 +22,36 @@ class CriticBase(tf.keras.Model):
         '''Append one-hot labels to input data'''
         assert self.can_condition
         n_classes = self.input_cats.size
-        indices = label_indices.astype(int).tolist()
+
+        # tf.one_hot is VERY picky about how indices are passed
+        if isinstance(label_indices, tf.Tensor):
+            indices = label_indices.numpy().tolist()
+        else:
+            indices = list(label_indices)
+
         encoded_labels = tf.one_hot(indices, n_classes, dtype=data.dtype)
         return tf.concat((data, encoded_labels), axis=1)
 
-    def is_true_class(self, name):
-        return name == self._true_class
+    def logits(self, data, labels=None):
+        if self.can_condition:
+            assert labels is not None
+            data = self.condition_inputs(data, labels)
+        return self.net(data)
 
-    def feed(self, data, name, labels=None):
+    def loss(self, data, real, gave_logits=False, labels=None):
         '''Discriminator loss
 
         Try to classify real data as true, generated data as fake.
         '''
-        if self.can_condition:
-            assert labels is not None
-            data = self.condition_inputs(data, labels)
-        logits = self.net(data)
+        if not gave_logits:
+            logits = self.logits(data, labels)
+        else:
+            logits = data
 
-        if self.is_true_class(name):
+        if real:
             loss = self.loss_real(logits)
         else:
             loss = self.loss_fake(logits)
-
-        return loss
-
-    def fool(self, data, name, labels=None):
-        '''Generator loss
-
-        Try to classify real data as fake, generated data as real.
-        '''
-        if self.can_condition:
-            assert labels is not None
-            data = self.condition_inputs(data, labels)
-
-        logits = self.net(data)
-        if self.is_true_class(name):
-            loss = self.loss_fake(logits)
-        else:
-            loss = self.loss_real(logits)
 
         return loss
 
@@ -105,7 +94,6 @@ class SpectralNormMixin:
 
         return
 
-    @staticmethod
     def _l2norm(self, arg, eps=1e-12):
         return arg / (tf.norm(arg) + eps)
 
@@ -140,7 +128,7 @@ class SpectralNormMixin:
 
         return sigma_lut
 
-    def feed(self, *args, normalize=None, **kwargs):
+    def loss(self, *args, normalize=None, **kwargs):
 
         if normalize is None:
             normalize = tf.keras.backend.learning_phase()
@@ -148,16 +136,7 @@ class SpectralNormMixin:
         if normalize:
             self.normalize()
 
-        return super().feed(*args, **kwargs)
-
-    def fool(self, *args, normalize=None, **kwargs):
-        if normalize is None:
-            normalize = tf.keras.backend.learning_phase()
-
-        if normalize:
-            self.normalize()
-
-        return super().fool(*args, **kwargs)
+        return super().loss(*args, **kwargs)
 
 
 class SpectralNormCritic(SpectralNormMixin, NonSaturatingCritic):
