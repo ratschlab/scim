@@ -141,13 +141,17 @@ class Trainer:
         _, (mse, kl), (code, recon) = vae.call(adata.X)
         label_values = adata.obs[labels].cat.codes.values
         logits = self.discriminator.logits(code, label_values)
+        disc_loss = self.discriminator.loss(logits,
+                                            real=tech is self.source_key,
+                                            gave_logits=True)
 
         adata.obsm['code'] = code.numpy()
         adata.obsm['recon'] = recon.numpy()
 
         adata.obs['loss-mse'] = mse.numpy().ravel()
         adata.obs['loss-kl'] = kl.numpy().ravel()
-        adata.obs['discriminator-probs'] = tf.sigmoid(logits).numpy().ravel()
+        adata.obs['loss-discriminator'] = disc_loss.numpy().ravel()
+        adata.obs['probs-discriminator'] = tf.sigmoid(logits).numpy().ravel()
 
         return
 

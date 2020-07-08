@@ -38,12 +38,15 @@ class CriticBase(tf.keras.Model):
             data = self.condition_inputs(data, labels)
         return self.net(data)
 
-    def loss(self, data, real, labels=None):
+    def loss(self, data, real, gave_logits=False, labels=None):
         '''Discriminator loss
 
         Try to classify real data as true, generated data as fake.
         '''
-        logits = self.logits(data, labels)
+        if not gave_logits:
+            logits = self.logits(data, labels)
+        else:
+            logits = data
 
         if real:
             loss = self.loss_real(logits)
