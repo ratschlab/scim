@@ -171,7 +171,7 @@ class Trainer:
 
         index = stack.obs.groupby('tech', group_keys=False).apply(lambda x: x.sample(100)).index
         substack = stack[index]
-        divergence = score_divergence(substack.X, substack.obs[labels].cat.codes, substack.obs['tech'].cat.codes)
+        divergence = score_divergence(substack.X, sources=substack.obs['tech'].cat.codes)
         stack.uns['divergence'] = divergence
         return stack
 

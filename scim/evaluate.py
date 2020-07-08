@@ -6,7 +6,7 @@ from universal_divergence import estimate
 from itertools import combinations
 
 
-def score_divergence(codes, labels=None, sources=None, k=50, **kwargs):
+def score_divergence(codes, sources, k=50, **kwargs):
     """
     Measures how well sources are mixed (smaller: well-mixed)
 
@@ -22,24 +22,22 @@ def score_divergence(codes, labels=None, sources=None, k=50, **kwargs):
 
     inputs:
         codes: merged data matrix
-        labels: labels of each item (e.g. cell-type), if None then all cells are used
         sources: index of each item's source (e.g tech; data or prior)
         k: k-NN used to estimate data density
         kwargs: see preprocess_code
 
     outputs:
-        divergence score,  non-negative
+        divergence score (non-negative)
     """
     num_datasets = np.unique(sources).size
     div_pq = list()
     div_qp = list()
 
-    # pairs of datasets
+    # calculate divergece score for each pair of datasets
     for d1, d2 in combinations(range(num_datasets), 2):
-        idx1, idx2, _ = separate_shared_idx(labels, sources, d1=d1, d2=d2)
-        if sum(idx1) < k or sum(idx2) < k:
-            continue
-
+        idx1 = sources == d1
+        idx2 = sources == d2
+        
         pq = estimate(codes[idx1, :], codes[idx2, :], k)
         div_pq.append(max(pq, 0))
 
@@ -51,32 +49,8 @@ def score_divergence(codes, labels=None, sources=None, k=50, **kwargs):
         div_score = (sum(div_pq) / len(div_pq) + sum(div_qp) / len(div_qp)) / 2
     except ZeroDivisionError:
         div_score = np.nan
+        
     return div_score
-
-
-def separate_shared_idx(labels=None, sources=None, d1=0, d2=1):
-    """
-    Function to split index into shared and distinct cell-types between a pair of sources
-    (needed for calculation of divergence and entropy scores)
-    inputs:
-        labels: labels of each item (e.g. cell-type), if None then all cells are used
-        sources: index of each item's source (e.g tech; data or prior)
-    outputs:
-        logical idx of shared cell-types (per data source), logical idx of distinct cell-types
-    """
-    src1 = sources == d1
-    src2 = sources == d2
-    if(labels is None):
-        src1_mutual = src1
-        src2_mutual = src2
-        src_specific = []
-    else:
-        shared_labels = np.intersect1d(np.unique(labels[src1]), np.unique(labels[src2]))
-        src1_mutual = np.logical_and(src1, np.isin(labels, shared_labels))
-        src2_mutual = np.logical_and(src2, np.isin(labels, shared_labels))
-        src_specific = np.logical_and(np.logical_or(src1, src2), np.logical_not(np.isin(labels, shared_labels)))
-    
-    return src1_mutual, src2_mutual, src_specific
 
 def extract_matched_labels(labels_source, labels_target, row_idx, col_idx):
     """ Merge all the metainfo (labels) for the matches
