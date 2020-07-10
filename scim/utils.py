@@ -1,6 +1,9 @@
 import anndata
 import tensorflow as tf
 
+from matplotlib.lines import Line2D
+import matplotlib.pyplot as plt
+
 
 def switch_obsm(adata, obsm_key, X_name='X'):
     new = anndata.AnnData(
@@ -41,3 +44,38 @@ def make_network(doutput,
 
     net.append(tf.keras.layers.Dense(doutput))
     return tf.keras.Sequential(net, **kwargs)
+
+
+def plot_training(trainer, axes):
+    assert len(axes) >= 3
+    loss_keys = trainer.history['train'].keys()
+
+    mse_keys = [k for k in loss_keys if k.startswith('mse-')]
+    disc_keys = [k for k in loss_keys if k.startswith('discriminator-')]
+    probs_keys = [k for k in loss_keys if k.startswith('probs-')]
+
+    plot_history_keys(trainer, mse_keys + disc_keys, axes[0])
+    plot_history_keys(trainer, probs_keys, axes[1])
+    plot_history_keys(trainer, ['divergence'], axes[2])
+    return
+
+
+def plot_history_keys(trainer, keys, ax):
+    tab10 = plt.get_cmap('tab10')
+    handles = list()
+    for idx, key in enumerate(keys):
+        trail = trainer.history['train'].get(key)
+
+        if trail is not None:
+            step, vals = list(zip(*trail))
+            ax.plot(step, vals, label=key, alpha=0.5, color=tab10(idx))
+
+        trail = trainer.history['test'].get(key)
+
+        step, vals = list(zip(*trail))
+        ax.plot(step, vals, label=key, alpha=0.75, color=tab10(idx))
+
+        handles.append(Line2D([0], [0], color=tab10(idx), label=key))
+    ax.legend(handles=handles)
+
+    return
