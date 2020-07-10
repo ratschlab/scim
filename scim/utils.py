@@ -1,5 +1,6 @@
 import anndata
 import tensorflow as tf
+import pandas as pd
 
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
@@ -79,3 +80,11 @@ def plot_history_keys(trainer, keys, ax):
     ax.legend(handles=handles)
 
     return
+
+def adata_to_pd(adata, add_cell_code_name=None):
+    ''' A helper function to load anndata and convert to pandas
+    '''
+    pd_data = pd.DataFrame(adata.X)
+    if(add_cell_code_name is not None):
+        pd_data.index = [add_cell_code_name+'_'+str(x) for x in pd_data.index.array]
+    return pd_data
