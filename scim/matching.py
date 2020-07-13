@@ -76,12 +76,11 @@ def extend_graph_null(G, source_idx, null_cost):
     
     return G
 
-def get_target_capacities(source_idx, target_idx, capacity_method='uniform', seed=456):
+def get_target_capacities(source_idx, target_idx, capacity_method='uniform'):
     """Compute a vector of capacities from target nodes to sink
     source_idx: nodes at the source of the graph
     target_idx: nodes at the target of the graph
-    capacity_method: how to set capacities on the target to sink edged {uniform, inf, top, 1to1}
-    seed: random seed
+    capacity_method: how to set capacities on the target to sink edged {uniform, top, 1to1}
     
     output: vector of capacities (of length=len(target_idx))
     """
@@ -90,15 +89,11 @@ def get_target_capacities(source_idx, target_idx, capacity_method='uniform', see
         capacities = [capacity]*len(target_idx)
         # randomly distribute remaining cells
         n_remaining = len(source_idx) - np.sum(capacities)
-        np.random.seed(seed)
         to_add_idx = np.random.choice(range(len(capacities)),n_remaining, replace=False)
         for i in to_add_idx:
             capacities[i] = capacities[i] + 1
-    elif(capacity_method=='inf'):
-        capacity = np.inf
-        capacities = [capacity]*len(target_idx)
     elif(capacity_method=='top'):
-        capacity = len(source_idx) + 1000
+        capacity = len(source_idx)
         capacities = [capacity]*len(target_idx)
     elif(capacity_method=='1to1'):
         capacity = 1
@@ -108,12 +103,11 @@ def get_target_capacities(source_idx, target_idx, capacity_method='uniform', see
         
     return capacities
 
-def build_graph_base(source_idx, target_idx, capacity_method='uniform', seed=456):
+def build_graph_base(source_idx, target_idx, capacity_method='uniform'):
     """Build a graph base
     source_idx: nodes at the source of the graph
     target_idx: nodes at the target of the graph
-    method: how to set capacities on the target to sink edged {uniform, inf, top, 1to1}
-    seed: random seed
+    method: how to set capacities on the target to sink edged {uniform, top, 1to1}
     
     output: directed graph object
     """
@@ -127,7 +121,7 @@ def build_graph_base(source_idx, target_idx, capacity_method='uniform', seed=456
     source_root_edges = list(itertools.product(['root'], source_idx, [{'capacity': 1, 'weight':0}]))
     G.add_edges_from(source_root_edges)
 
-    capacities = get_target_capacities(source_idx, target_idx, capacity_method=capacity_method, seed=seed)
+    capacities = get_target_capacities(source_idx, target_idx, capacity_method=capacity_method)
     target_sink_edges = [(target_idx[i], 'sink', {'capacity':capacities[i], 'weight':0}) for i in range(len(target_idx))]
     G.add_edges_from(target_sink_edges)
     
@@ -135,21 +129,20 @@ def build_graph_base(source_idx, target_idx, capacity_method='uniform', seed=456
 
 
 def build_graph(source_idx, target_idx, knn_source_idx, knn_target_idx, knn_dist,
-                capacity_method='uniform', add_null=True, null_cost_percentile=95, seed=456):
+                capacity_method='uniform', add_null=True, null_cost_percentile=95):
     """Build a graph based on knn indices
     source_idx: nodes at the source of the graph
     target_idx: nodes at the target of the graph
     knn_source_idx: nodes at the source of the graph with knn connections
     knn_target_idx: nodes at the target of the graph with knn connections
     knn_dist: distance (cost) on the knn connections
-    capacity_method: how to set capacities on the target to sink edged {uniform, inf, top, 1to1}
+    capacity_method: how to set capacities on the target to sink edged {uniform, top, 1to1}
     add_null: whether to add the null node ot the graph
     null_cost_percentile: which percentile of the overall costs should correspond to the null match penalty
-    seed: random seed
     
     output: directed graph object
     """
-    G = build_graph_base(source_idx, target_idx, capacity_method=capacity_method, seed=seed)
+    G = build_graph_base(source_idx, target_idx, capacity_method=capacity_method)
     # add inter-technology connections
     source_target_edges = [(knn_source_idx[i], knn_target_idx[i],
                            {'capacity':1, 'weight':knn_dist[i]}) for i in range(len(knn_dist))]
@@ -172,7 +165,7 @@ def convert_to_int(cost, factor):
 
 def get_cost_knn_graph(source, target, factor=100, cost_type='distance', knn_k=10, knn_n_jobs=100,
                        capacity_method='uniform', add_null=True,
-                       null_cost_percentile=95, seed=456):
+                       null_cost_percentile=95):
     """Build an extended graph based on knn graph
     source: pandas dataframe which rows will be placed at the source of the graph (larger dataset)
     target: pandas dataframe which rows will be placed at the target of the graph (smaller dataset)
@@ -180,10 +173,9 @@ def get_cost_knn_graph(source, target, factor=100, cost_type='distance', knn_k=1
     cost_type: {percentile} if costs should be converted into percentiles, {distance}: cost (Euclidean distance)
     knn_k: k neighbors to be found
     knn_n_jobs: how many processors to use for the job
-    capacity_method: how to set capacities on the target to sink edged {uniform, inf, top, 1to1}
+    capacity_method: how to set capacities on the target to sink edged {uniform, top, 1to1}
     add_null: whether to add the null node ot the graph
     null_cost_percentile: which percentile of the overall costs should correspond to the null match penalty
-    seed: random seed
     
     output: directed graph object
     """
@@ -195,14 +187,13 @@ def get_cost_knn_graph(source, target, factor=100, cost_type='distance', knn_k=1
         knn_dist = np.digitize(knn_dist, bins=p)
         
     knn_dist = convert_to_int(knn_dist, factor)
-    print('Max dist: ', np.max(knn_dist))
     
     source_idx = ['source_'+str(x) for x in range(source.shape[0])]
     target_idx = ['target_'+str(x) for x in range(target.shape[0])]
     
     G = build_graph(source_idx, target_idx, knn_source_idx, knn_target_idx, knn_dist,
                     capacity_method=capacity_method, add_null=add_null, 
-                    null_cost_percentile=null_cost_percentile, seed=seed)
+                    null_cost_percentile=null_cost_percentile)
 
     print('Number of nodes: ', len(G.nodes))
     print('Number of edges: ', len(G.edges))
