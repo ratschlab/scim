@@ -100,7 +100,29 @@ def get_confusion_matrix(matches, colname_compare='cell_type'):
     colname_compare: column name to use for accuracy calculation {colname_compare}_source,
                      {colname_compare}_target must be in matches.columns
     """
-    y_source = pd.Series(matches[colname_compare+'_source'], name='Source')
-    y_target = pd.Series(matches[colname_compare+'_target'], name='Target')
+    if(np.sum(matches.columns.isin([colname_compare+'_source', colname_compare+'_target']))!=2):
+        print('The input dataframe does not include {colname_compare} information!')
+    else:
+        y_source = pd.Series(matches[colname_compare+'_source'], name='Source')
+        y_target = pd.Series(matches[colname_compare+'_target'], name='Target')
     
-    return pd.crosstab(y_source, y_target)
+        return pd.crosstab(y_source, y_target)
+
+def get_correlation(matches, colname_compare='pt', round_to=2):
+    """ Get the correlation of pseudotime
+    matches: pandas dataframe, output from extract_matched_labels()
+    colname_compare: column name to use for correlation calculation {colname_compare}_source,
+                     {colname_compare}_target must be in matches.columns
+    round_to: round to which decimal place
+    """
+    if(np.sum(matches.columns.isin([colname_compare+'_source', colname_compare+'_target']))!=2):
+        print('The input dataframe does not include {colname_compare} information!')
+        cor_sp = np.nan
+        cor_p = np.nan
+    else:
+        y_source = pd.Series(matches[colname_compare+'_source'], name='Source')
+        y_target = pd.Series(matches[colname_compare+'_target'], name='Target')
+        cor_sp = round(sp.stats.spearmanr(y_source, y_target)[0], round_to)
+        cor_p = round(sp.stats.pearsonr(y_source, y_target)[0], round_to)
+        
+    return cor_sp, cor_p
