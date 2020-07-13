@@ -7,4 +7,4 @@ tensorflow==1.14.0
 anndata==0.6.22.post1
 pandas==0.25.1
 matplotlib==3.0.3
-scim==0.2.1
+git+git://github.com/soedinglab/prosstt.git
