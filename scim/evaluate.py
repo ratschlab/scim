@@ -52,28 +52,37 @@ def score_divergence(codes, sources, k=50, **kwargs):
         
     return div_score
 
-def extract_matched_labels(labels_source, labels_target, row_idx, col_idx):
+def extract_matched_labels(source, target, row_idx, col_idx, keep_cols=None):
     """ Merge all the metainfo (labels) for the matches
-    labels_*: pandas dataframe with all the metainfo, rows correspond to cells
+    source, target: anndata with ".obs" containing all the metainfo, rows correspond to cells
     row_idx: numerical indices of the matches (source)
     col_idx: numerical indices of the matches (target)
+    keep_cols: which columns to keep (if None, all columns are kept)
     """
     
-    # bcs anndata is mutable
-    labels_source = labels_source.copy()
-    labels_target = labels_target.copy()
+    labels_source = source.obs.copy()
+    labels_target = target.obs.copy()
     
     indices = pd.DataFrame({'source':row_idx, 'target':col_idx}).dropna()
+    indices['target'] = [int(x) for x in indices['target']]
     
     if 'source' not in labels_source.columns:
         labels_source.columns = [x+'_source' for x in labels_source.columns]
-    labels_source = labels_source.iloc[indices['source'],:].reset_index(drop=True)
+    labels_source = labels_source.iloc[indices['source'].values,:].reset_index(drop=True)
     
     if 'target' not in labels_target.columns:
         labels_target.columns = [x+'_target' for x in labels_target.columns]
-    labels_target = labels_target.iloc[indices['target'],:].reset_index(drop=True) 
+    labels_target = labels_target.iloc[indices['target'].values,:].reset_index(drop=True) 
     
     labels_matched = pd.concat([labels_source, labels_target], axis=1, ignore_index=False)
+    labels_matched['index_source'] = source.obs_names[indices['source'].values]
+    labels_matched['index_target'] = target.obs_names[indices['target'].values]
+    
+    if(keep_cols is not None):
+        keep_cols.append('index')
+        keep_colnames = [x+'_source' for x in keep_cols]
+        keep_colnames.extend([x+'_target' for x in keep_cols])
+        labels_matched = labels_matched.loc[:,keep_colnames]
     
     return labels_matched  
 
