@@ -30,4 +30,4 @@ Using PROSSTT (Papadopouloset al., 2019), we generate three single-cell ’omics
 
 **scRNA-seq data:** In brief, standard QC-measures and preprocessing steps, such as removal of low quality cells, as well as filtering out mitochondrial, ribosomal and non-coding genes, were applied to 10X Genomics-generated data. Expression data was library-size normalized and corrected for the cell-cycle effect. Cell-type identification was performed using a set of cell-type-specific marker genes (Tirosh et al., 2016). Genes were then filtered to retain those that could code for proteins measured in CyTOF channels, the top 32 T-Cell/ B-Cell marker genes, and the remaining most variable genes for a final set of 256 genes. The total number of B-Cells and T-Cells in this dataset amounts to 4,683. Only T cells and B cells are provided.
 
-More details can be found in the SCIM manuscript.
+More details can be found in the SCIM manuscript (https://www.biorxiv.org/content/10.1101/2020.06.11.146845v3)
