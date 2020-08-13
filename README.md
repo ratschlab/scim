@@ -21,7 +21,7 @@ Details to access the human bone marrow dataset can be found in the publication 
 
 ### Simulated data generated with PROSTT
 
-Using PROSSTT (Papadopouloset al., 2019), we generate three single-cell ’omics-styled technologies which share a common latent structure without direct feature correspondences. PROSSTT parameterizes a negative binomial distribution given a tree representing an underlying temporal branching process. By using the same tree and running PROSSTT under different seeds, we obtain three datasets with a common latent structure yet lacking any correspondences between features. We used a five branch tree with different branch lengths. Each dataset contains 64,000 cells with 256 markers.
+Using PROSSTT (Papadopouloset al., 2019), we simulated three single-cell ’omics-styled technologies which share a common latent structure without direct feature correspondences. PROSSTT parameterizes a negative binomial distribution given a tree representing an underlying temporal branching process. By using the same tree and running PROSSTT under different seeds, we obtain three datasets with a common latent structure yet lacking any correspondences between features. We used a five branch tree with different branch lengths. Each dataset contains 64,000 cells with 256 markers.
 
 
 ### Single-cell profile of a metastatic melanoma sample from the Tumor Profiler Consortium
