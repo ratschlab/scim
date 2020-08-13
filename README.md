@@ -16,7 +16,7 @@ pip install -r requirements.txt
 ## Datasets used
 
 The PROSSTT simulated dataset and the metastatic melanoma dataset can be
-downloaded from the TuPro website (https://tpreports.nexus.ethz.ch/downloads/scim/)
+downloaded from the TuPro website: https://tpreports.nexus.ethz.ch/downloads/scim/
 
 Details to access the human bone marrow dataset can be found in the publication that
-describes it: [Oetgen et al., 2018] (https://insight.jci.org/articles/view/124928)
+describes it, Oetgen et al., 2018 (https://insight.jci.org/articles/view/124928)
