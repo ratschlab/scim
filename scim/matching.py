@@ -17,14 +17,18 @@ def get_knn_onesided(source, target, knn_k, knn_n_jobs, st=True):
     """
     knn = cKDTree(target).query(x=source, k=knn_k, n_jobs=knn_n_jobs)
     if(st):
-        knn_source_idx = ['source_'+str(x) for x in np.array(range(source.shape[0])).repeat(knn_k)]
-        knn_target_idx = ['target_'+str(x) for x in knn[1].reshape((-1,1)).flatten()]
+        sname = 'source'
+        tname = 'target'
     else:
-        knn_target_idx = ['target_'+str(x) for x in np.array(range(target.shape[0])).repeat(knn_k)]
-        knn_source_idx = ['source_'+str(x) for x in knn[1].reshape((-1,1)).flatten()]
+        sname = 'target'
+        tname = 'source'
+    knn_idx = dict()
+    knn_idx[sname] = ['_'.join([sname,str(x)]) for x in np.array(range(source.shape[0])).repeat(knn_k)]
+    knn_idx[tname] = ['_'.join([tname,str(x)]) for x in knn[1].reshape((-1,1)).flatten()]
+
     knn_dist = knn[0].reshape((-1,1)).flatten()
 
-    return knn_source_idx, knn_target_idx, knn_dist
+    return knn_idx['source'], knn_idx['target'], knn_dist
 
 def get_knn_union(source, target, knn_k, knn_n_jobs):
     """Get kNN connections between source and target (union)
